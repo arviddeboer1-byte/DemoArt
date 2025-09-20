@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ping Pong - HTML5</title>
+  <style>
+    :root{--bg:#0b1220;--panel:#0f1724;--accent:#22c1c3;--muted:#94a3b8}
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,var(--bg),#07101a);color:#e6eef8}
+    .wrap{width:960px;max-width:96vw;padding:18px;background:rgba(255,255,255,0.02);border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    h1{font-size:18px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;color:inherit;cursor:pointer}
+    button.primary{background:linear-gradient(90deg,var(--accent),#7ef8ff);color:#042;box-shadow:0 6px 18px rgba(34,193,195,0.12);border:none}
+    button:active{transform:translateY(1px)}
+    canvas{display:block;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:8px;box-shadow:inset 0 0 60px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.02)}
+    .info{font-size:13px;color:var(--muted);margin-top:8px;display:flex;justify-content:space-between}
+    .kbd{font-family:monospace;background:rgba(255,255,255,0.03);padding:4px 6px;border-radius:6px}
+    @media (max-width:640px){.wrap{padding:12px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Ping Pong — HTML5 canvas</h1>
+      <div class="controls">
+        <button id="modeBtn">Spelen tegen: Robot</button>
+        <button id="pauseBtn">Pauze</button>
+        <button id="resetBtn" class="primary">Reset</button>
+      </div>
+    </header>
+
+    <canvas id="game" width="900" height="500"></canvas>
+
+    <div class="info">
+      <div>Speler links: <span class="kbd">W / S</span> — Speler rechts: <span class="kbd">Pijl omhoog / omlaag</span></div>
+      <div>Score: <span id="score">0 — 0</span></div>
+    </div>
+  </div>
+
+  <script>
+    // Basic ping-pong game in one file. Controls:
+    // Left player: W (up), S (down)
+    // Right player: ArrowUp, ArrowDown
+    // Toggle mode: Mode button (Robot / 2 spelers)
+    // Pause: Pauze knop or Space
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width; const H = canvas.height;
+
+    const paddleHeight = 100;
+    const paddleWidth = 12;
+    const netWidth = 4;
+
+    const left = { x: 20, y: H/2 - paddleHeight/2, w: paddleWidth, h: paddleHeight, score: 0 };
+    const right = { x: W - 20 - paddleWidth, y: H/2 - paddleHeight/2, w: paddleWidth, h: paddleHeight, score: 0 };
+
+    const ball = { x: W/2, y: H/2, r: 8, speed: 6, vx: 6, vy: 3 };
+
+    let playing = true;
+    let mode = 'robot'; // 'robot' or 'human'
+
+    // Input state
+    const keys = {};
+    window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if (e.code === 'Space'){ togglePause(); e.preventDefault(); } });
+    window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+    // UI buttons
+    const modeBtn = document.getElementById('modeBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const scoreEl = document.getElementById('score');
+
+    modeBtn.addEventListener('click', ()=>{ mode = (mode === 'robot') ? 'human' : 'robot'; modeBtn.textContent = 'Spelen tegen: ' + (mode === 'robot' ? 'Robot' : '2 spelers'); });
+    pauseBtn.addEventListener('click', ()=> togglePause());
+    resetBtn.addEventListener('click', resetGame);
+
+    function togglePause(){ playing = !playing; pauseBtn.textContent = playing ? 'Pauze' : 'Verder'; }
+    function resetGame(){ left.score = 0; right.score = 0; resetBall((Math.random()>.5)?1:-1); updateScore(); }
+
+    function resetBall(direction = 1){ ball.x = W/2; ball.y = H/2; ball.speed = 6; ball.vx = direction * ball.speed; ball.vy = (Math.random()*4 - 2); }
+
+    function updateScore(){ scoreEl.textContent = left.score + ' — ' + right.score; }
+
+    function drawRoundedRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); }
+
+    function draw(){
+      // background
+      ctx.clearRect(0,0,W,H);
+      // center dashed line
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      for(let i=10;i<H;i+=24){ ctx.fillRect(W/2 - netWidth/2, i, netWidth, 12); }
+
+      // paddles
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      drawRoundedRect(left.x, left.y, left.w, left.h, 6);
+      drawRoundedRect(right.x, right.y, right.w, right.h, 6);
+
+      // ball
+      ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+
+      // scores
+      ctx.font = '22px system-ui, sans-serif'; ctx.textAlign='center'; ctx.fillStyle='rgba(255,255,255,0.9)';
+      ctx.fillText(left.score, W*0.25, 40); ctx.fillText(right.score, W*0.75, 40);
+    }
+
+    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+    function update(dt){
+      if(!playing) return;
+      // Move paddles by input
+      // Left: w/s
+      if(keys['w']) left.y -= 8; if(keys['s']) left.y += 8;
+      // Right: arrowup/arrowdown or up/down
+      if(mode === 'human'){
+        if(keys['arrowup'] || keys['up']) right.y -= 8;
+        if(keys['arrowdown'] || keys['down']) right.y += 8;
+      } else {
+        // simple AI: follow ball with a small delay and max speed
+        const target = ball.y - right.h/2;
+        const diff = target - right.y;
+        const aiSpeed = clamp(Math.abs(diff) * 0.12, 2, 7);
+        right.y += (diff > 0) ? aiSpeed : -aiSpeed;
+      }
+
+      // keep paddles inside
+      left.y = clamp(left.y, 2, H - left.h - 2);
+      right.y = clamp(right.y, 2, H - right.h - 2);
+
+      // move ball
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // collision with top/bottom
+      if(ball.y - ball.r <= 0){ ball.y = ball.r; ball.vy *= -1; }
+      if(ball.y + ball.r >= H){ ball.y = H - ball.r; ball.vy *= -1; }
+
+      // collision with paddles
+      if(ball.x - ball.r <= left.x + left.w){
+        if(ball.y >= left.y && ball.y <= left.y + left.h){
+          ball.x = left.x + left.w + ball.r; // avoid sticking
+          const relative = (ball.y - (left.y + left.h/2)) / (left.h/2);
+          const bounce = relative * 5; // angle
+          ball.vx = Math.abs(ball.vx) + 0.6; // increase speed
+          ball.vx = Math.abs(ball.vx);
+          ball.vy = bounce;
+          if(Math.random() < 0.12) ball.vy += (Math.random()*2-1);
+        }
+      }
+
+      if(ball.x + ball.r >= right.x){
+        if(ball.y >= right.y && ball.y <= right.y + right.h){
+          ball.x = right.x - ball.r;
+          const relative = (ball.y - (right.y + right.h/2)) / (right.h/2);
+          const bounce = relative * 5;
+          ball.vx = -Math.abs(ball.vx) - 0.6;
+          ball.vy = bounce;
+          if(Math.random() < 0.12) ball.vy += (Math.random()*2-1);
+        }
+      }
+
+      // score
+      if(ball.x < 0){ right.score += 1; updateScore(); resetBall(1); }
+      if(ball.x > W){ left.score += 1; updateScore(); resetBall(-1); }
+    }
+
+    let last = performance.now();
+    function loop(t){
+      const dt = (t - last) / 1000;
+      last = t;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // Start
+    resetGame();
+    requestAnimationFrame(loop);
+
+    // Touch support: simple virtual paddles by tapping top/bottom half left/right
+    canvas.addEventListener('touchstart', handleTouch);
+    canvas.addEventListener('touchmove', handleTouch);
+    function handleTouch(e){
+      e.preventDefault();
+      const t = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = (t.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (t.clientY - rect.top) * (canvas.height / rect.height);
+      if(x < canvas.width/2){ // left side touch -> move left paddle toward y
+        left.y = clamp(y - left.h/2, 0, H - left.h);
+      } else {
+        if(mode === 'human') right.y = clamp(y - right.h/2, 0, H - right.h);
+      }
+    }
+
+    // Keyboard hint: prevent arrow keys scrolling
+    window.addEventListener('keydown', function(e){ if(['ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault(); });
+
+    // Small feature: press R to reset
+    window.addEventListener('keydown', e => { if(e.key.toLowerCase() === 'r'){ resetGame(); } });
+
+    // Make canvas responsive
+    function resizeCanvas(){ const ratio = canvas.width / canvas.height; const maxW = Math.min(window.innerWidth - 40, 960); const newW = maxW; const newH = Math.round(newW / ratio); canvas.style.width = newW + 'px'; canvas.style.height = newH + 'px'; }
+    window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+  </script>
+</body>
+</html>
