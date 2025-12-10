@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vraag & Aanbod Prikbord</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
@@ -10,11 +10,12 @@
     form { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
     label { display: block; margin-top: 10px; font-weight: bold; }
     input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
-    button { margin-top: 15px; padding: 10px 15px; cursor:pointer; }
+    button { margin-top: 15px; padding: 10px 15px; }
     .item { border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
     .vraag { background: #fff4f4; }
     .aanbod { background: #f4fff4; }
-    .item img { max-width: 100%; border-radius: 5px; margin-top: 5px; }
+    .item img { max-width: 200px; margin-top: 10px; display: block; border-radius: 5px; }
+    .item a { color: blue; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -33,10 +34,10 @@
     <label>Contactgegevens</label>
     <input type="text" id="contact" required />
 
-    <label>Beschrijving (URLs worden klikbaar)</label>
+    <label>Beschrijving</label>
     <textarea id="beschrijving" rows="4" required></textarea>
 
-    <label>Foto (optioneel, 1 bestand)</label>
+    <label>Foto (optioneel)</label>
     <input type="file" id="foto" accept="image/*" />
 
     <button type="submit">Plaats bericht</button>
@@ -49,78 +50,99 @@
   <div id="vraagList"></div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
-  const firebaseConfig = {
-    apiKey: "JOUW_API_KEY_HIER",
-    authDomain: "JOUW_PROJECT.firebaseapp.com",
-    projectId: "JOUW_PROJECT",
-    storageBucket: "JOUW_PROJECT.appspot.com",
-    messagingSenderId: "JOUW_ID",
-    appId: "JOUW_APP_ID"
-  };
+// --- Firebase Config ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDjRzYTrvVHK583A9h3e75LBfmQSWsmz1Y",
+  authDomain: "myremoteagent-bb42c.firebaseapp.com",
+  projectId: "myremoteagent-bb42c",
+  storageBucket: "myremoteagent-bb42c.appspot.com",
+  messagingSenderId: "611952695596",
+  appId: "1:611952695596:web:58e84e24bb70a475e4b489",
+  measurementId: "G-ZY1E7CGRLV"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const storage = getStorage(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-  const form = document.getElementById('postForm');
-  const aanbodList = document.getElementById('aanbodList');
-  const vraagList = document.getElementById('vraagList');
+const form = document.getElementById('postForm');
+const aanbodList = document.getElementById('aanbodList');
+const vraagList = document.getElementById('vraagList');
 
-  function linkify(text) {
-    const urlPattern = /(https?:\/\/[^\s]+)/g;
-    return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
+// Helper om URL's klikbaar te maken
+function linkify(text) {
+  const urlPattern = /(https?:\/\/[^\s]+)/g;
+  return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
+}
+
+// Realtime ophalen van berichten
+const q = query(collection(db, "prikbord"), orderBy("timestamp", "desc"));
+onSnapshot(q, (snapshot) => {
+  aanbodList.innerHTML = "";
+  vraagList.innerHTML = "";
+
+  snapshot.docs.forEach(doc => {
+    const item = doc.data();
+    const div = document.createElement('div');
+    div.className = 'item ' + item.type;
+    div.innerHTML = `
+      <strong>${item.naam}</strong><br>
+      Contact: ${item.contact}<br>
+      <p>${linkify(item.beschrijving)}</p>
+      ${item.fotoUrl ? `<img src="${item.fotoUrl}" alt="Foto">` : ''}
+    `;
+    if (item.type === 'aanbod') aanbodList.appendChild(div);
+    else vraagList.appendChild(div);
+  });
+});
+
+// Formulier afhandelen
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const type = document.getElementById('type').value;
+  const naam = document.getElementById('naam').value.trim();
+  const contact = document.getElementById('contact').value.trim();
+  const beschrijving = document.getElementById('beschrijving').value.trim();
+  const fotoInput = document.getElementById('foto');
+
+  if (!naam || !contact || !beschrijving) {
+    alert("Vul alle verplichte velden in.");
+    return;
   }
 
-  const q = query(collection(db, "prikbord"), orderBy("timestamp", "desc"));
-  onSnapshot(q, (snapshot) => {
-    aanbodList.innerHTML = "";
-    vraagList.innerHTML = "";
+  let fotoUrl = null;
 
-    snapshot.docs.forEach(doc => {
-      const item = doc.data();
-      const div = document.createElement('div');
-      div.className = 'item ' + item.type;
-      div.innerHTML = `<strong>${item.naam}</strong><br>Contact: ${item.contact}<br><p>${linkify(item.beschrijving)}</p>`;
-      if(item.fotoUrl) {
-        const img = document.createElement('img');
-        img.src = item.fotoUrl;
-        div.appendChild(img);
+  try {
+    if(fotoInput.files && fotoInput.files.length > 0) {
+      const file = fotoInput.files[0];
+      if(file.size > 5 * 1024 * 1024){ // max 5MB
+        alert("Het gekozen bestand is te groot (max 5MB).");
+        return;
       }
-      if (item.type === 'aanbod') aanbodList.appendChild(div);
-      else vraagList.appendChild(div);
-    });
-  });
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      const type = document.getElementById('type').value;
-      const naam = document.getElementById('naam').value;
-      const contact = document.getElementById('contact').value;
-      const beschrijving = document.getElementById('beschrijving').value;
-      const fotoInput = document.getElementById('foto');
-      let fotoUrl = null;
-
-      if(fotoInput.files.length > 0){
-        const file = fotoInput.files[0];
-        const storageRef = ref(storage, `prikbord/${Date.now()}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        fotoUrl = await getDownloadURL(storageRef);
-      }
-
-      const entry = { type, naam, contact, beschrijving, timestamp: Date.now(), fotoUrl };
-      await addDoc(collection(db, "prikbord"), entry);
-      form.reset();
-    } catch(err) {
-      console.error("Fout bij opslaan:", err);
-      alert("Er is een fout opgetreden. Bekijk console voor details.");
+      const fileRef = ref(storage, `prikbord/${Date.now()}_${file.name}`);
+      await uploadBytes(fileRef, file);
+      fotoUrl = await getDownloadURL(fileRef);
     }
-  });
-</script>
+  } catch(err) {
+    console.warn("Fout bij foto upload, bericht wordt zonder foto geplaatst:", err);
+    fotoUrl = null;
+  }
 
+  const entry = { type, naam, contact, beschrijving, timestamp: Date.now(), fotoUrl };
+
+  try {
+    await addDoc(collection(db, "prikbord"), entry);
+    form.reset();
+  } catch(err) {
+    console.error("Fout bij opslaan:", err);
+    alert("Er is een fout opgetreden bij het plaatsen van je bericht.");
+  }
+});
+</script>
 </body>
 </html>
