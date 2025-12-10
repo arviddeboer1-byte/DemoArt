@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vraag & Aanbod Prikbord</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
+    h1 { text-align: center; }
+    form { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+    button { margin-top: 15px; padding: 10px 15px; }
+    .item { border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+    .vraag { background: #fff4f4; }
+    .aanbod { background: #f4fff4; }
+  </style>
+</head>
+<body>
+  <h1>Vraag & Aanbod Prikbord</h1>
+
+  <form id="postForm">
+    <label>Type</label>
+    <select id="type">
+      <option value="vraag">Vraag</option>
+      <option value="aanbod">Aanbod</option>
+    </select>
+
+    <label>Naam</label>
+    <input type="text" id="naam" required />
+
+    <label>Contactgegevens</label>
+    <input type="text" id="contact" required />
+
+    <label>Beschrijving</label>
+    <textarea id="beschrijving" rows="4" required></textarea>
+
+    <button type="submit">Plaats bericht</button>
+  </form>
+
+  <h2>Aanbod</h2>
+  <div id="aanbodList"></div>
+
+  <h2>Vragen</h2>
+  <div id="vraagList"></div>
+
+
+<script>
+  let aanbodItems = [];
+  let vraagItems = [];
+  const maxItems = 10;
+
+  const form = document.getElementById('postForm');
+  const aanbodList = document.getElementById('aanbodList');
+  const vraagList = document.getElementById('vraagList');
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const type = document.getElementById('type').value;
+    const naam = document.getElementById('naam').value;
+    const contact = document.getElementById('contact').value;
+    const beschrijving = document.getElementById('beschrijving').value;
+
+    const entry = { naam, contact, beschrijving };
+
+    if (type === 'aanbod') {
+      if (aanbodItems.length >= maxItems) {
+        alert('Maximaal 10 aanbod items bereikt.');
+        return;
+      }
+      aanbodItems.push(entry);
+    } else {
+      if (vraagItems.length >= maxItems) {
+        alert('Maximaal 10 vraag items bereikt.');
+        return;
+      }
+      vraagItems.push(entry);
+    }
+
+    form.reset();
+    renderLists();
+  });
+
+  function renderLists() {
+    aanbodList.innerHTML = '';
+    vraagList.innerHTML = '';
+
+    aanbodItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'item aanbod';
+      div.innerHTML = `<strong>${item.naam}</strong><br>Contact: ${item.contact}<br><p>${item.beschrijving}</p>`;
+      aanbodList.appendChild(div);
+    });
+
+    vraagItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'item vraag';
+      div.innerHTML = `<strong>${item.naam}</strong><br>Contact: ${item.contact}<br><p>${item.beschrijving}</p>`;
+      vraagList.appendChild(div);
+    });
+  }
+</script>
+
+</body>
+</html>
