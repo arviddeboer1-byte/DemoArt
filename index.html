@@ -10,12 +10,11 @@
     form { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
     label { display: block; margin-top: 10px; font-weight: bold; }
     input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
-    button { margin-top: 15px; padding: 10px 15px; }
+    button { margin-top: 15px; padding: 10px 15px; cursor:pointer; }
     .item { border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
     .vraag { background: #fff4f4; }
     .aanbod { background: #f4fff4; }
-    a { color: #1a0dab; word-break: break-all; }
-    img { max-width: 100%; border-radius: 8px; margin-top: 8px; }
+    .item img { max-width: 100%; border-radius: 5px; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -34,10 +33,10 @@
     <label>Contactgegevens</label>
     <input type="text" id="contact" required />
 
-    <label>Beschrijving</label>
+    <label>Beschrijving (URLs worden klikbaar)</label>
     <textarea id="beschrijving" rows="4" required></textarea>
 
-    <label>Foto (optioneel)</label>
+    <label>Foto (optioneel, 1 bestand)</label>
     <input type="file" id="foto" accept="image/*" />
 
     <button type="submit">Plaats bericht</button>
@@ -55,13 +54,12 @@
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
   const firebaseConfig = {
-    apiKey: "AIzaSyDjRzYTrvVHK583A9h3e75LBfmQSWsmz1Y",
-    authDomain: "myremoteagent-bb42c.firebaseapp.com",
-    projectId: "myremoteagent-bb42c",
-    storageBucket: "myremoteagent-bb42c.appspot.com",
-    messagingSenderId: "611952695596",
-    appId: "1:611952695596:web:58e84e24bb70a475e4b489",
-    measurementId: "G-ZY1E7CGRLV"
+    apiKey: "JOUW_API_KEY_HIER",
+    authDomain: "JOUW_PROJECT.firebaseapp.com",
+    projectId: "JOUW_PROJECT",
+    storageBucket: "JOUW_PROJECT.appspot.com",
+    messagingSenderId: "JOUW_ID",
+    appId: "JOUW_APP_ID"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -73,8 +71,8 @@
   const vraagList = document.getElementById('vraagList');
 
   function linkify(text) {
-    const urlPattern = /(\bhttps?:\/\/[^\s]+)/gi;
-    return text.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
   }
 
   const q = query(collection(db, "prikbord"), orderBy("timestamp", "desc"));
@@ -86,15 +84,12 @@
       const item = doc.data();
       const div = document.createElement('div');
       div.className = 'item ' + item.type;
-      div.innerHTML = `<strong>${item.naam}</strong><br>
-                       Contact: ${item.contact}<br>
-                       <p>${linkify(item.beschrijving)}</p>`;
-      if(item.fotoUrl){
+      div.innerHTML = `<strong>${item.naam}</strong><br>Contact: ${item.contact}<br><p>${linkify(item.beschrijving)}</p>`;
+      if(item.fotoUrl) {
         const img = document.createElement('img');
         img.src = item.fotoUrl;
         div.appendChild(img);
       }
-
       if (item.type === 'aanbod') aanbodList.appendChild(div);
       else vraagList.appendChild(div);
     });
@@ -102,25 +97,30 @@
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    try {
+      const type = document.getElementById('type').value;
+      const naam = document.getElementById('naam').value;
+      const contact = document.getElementById('contact').value;
+      const beschrijving = document.getElementById('beschrijving').value;
+      const fotoInput = document.getElementById('foto');
+      let fotoUrl = null;
 
-    const type = document.getElementById('type').value;
-    const naam = document.getElementById('naam').value;
-    const contact = document.getElementById('contact').value;
-    const beschrijving = document.getElementById('beschrijving').value;
-    const fotoInput = document.getElementById('foto');
-    let fotoUrl = null;
+      if(fotoInput.files.length > 0){
+        const file = fotoInput.files[0];
+        const storageRef = ref(storage, `prikbord/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        fotoUrl = await getDownloadURL(storageRef);
+      }
 
-    if(fotoInput.files.length > 0){
-      const file = fotoInput.files[0];
-      const storageReference = ref(storage, `prikbord/${Date.now()}_${file.name}`);
-      await uploadBytes(storageReference, file);
-      fotoUrl = await getDownloadURL(storageReference);
+      const entry = { type, naam, contact, beschrijving, timestamp: Date.now(), fotoUrl };
+      await addDoc(collection(db, "prikbord"), entry);
+      form.reset();
+    } catch(err) {
+      console.error("Fout bij opslaan:", err);
+      alert("Er is een fout opgetreden. Bekijk console voor details.");
     }
-
-    const entry = { type, naam, contact, beschrijving, timestamp: Date.now(), fotoUrl };
-    await addDoc(collection(db, "prikbord"), entry);
-    form.reset();
   });
 </script>
+
 </body>
 </html>
