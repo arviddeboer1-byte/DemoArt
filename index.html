@@ -14,6 +14,7 @@
     .item { border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
     .vraag { background: #fff4f4; }
     .aanbod { background: #f4fff4; }
+    a { color: #1a0dab; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -49,15 +50,15 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
   import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDjRzYTrvVHK583A9h3e75LBfmQSWsmz1Y",
-  authDomain: "myremoteagent-bb42c.firebaseapp.com",
-  projectId: "myremoteagent-bb42c",
-  storageBucket: "myremoteagent-bb42c.appspot.com",   // ← CORRECT!
-  messagingSenderId: "611952695596",
-  appId: "1:611952695596:web:58e84e24bb70a475e4b489",
-  measurementId: "G-ZY1E7CGRLV"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyDjRzYTrvVHK583A9h3e75LBfmQSWsmz1Y",
+    authDomain: "myremoteagent-bb42c.firebaseapp.com",
+    projectId: "myremoteagent-bb42c",
+    storageBucket: "myremoteagent-bb42c.appspot.com",
+    messagingSenderId: "611952695596",
+    appId: "1:611952695596:web:58e84e24bb70a475e4b489",
+    measurementId: "G-ZY1E7CGRLV"
+  };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -65,6 +66,12 @@ const firebaseConfig = {
   const form = document.getElementById('postForm');
   const aanbodList = document.getElementById('aanbodList');
   const vraagList = document.getElementById('vraagList');
+
+  // Helper: zet URLs om naar klikbare links
+  function linkify(text) {
+    const urlPattern = /(\bhttps?:\/\/[^\s]+)/gi;
+    return text.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  }
 
   const q = query(collection(db, "prikbord"), orderBy("timestamp", "desc"));
   onSnapshot(q, (snapshot) => {
@@ -75,7 +82,9 @@ const firebaseConfig = {
       const item = doc.data();
       const div = document.createElement('div');
       div.className = 'item ' + item.type;
-      div.innerHTML = `<strong>${item.naam}</strong><br>Contact: ${item.contact}<br><p>${item.beschrijving}</p>`;
+      div.innerHTML = `<strong>${item.naam}</strong><br>
+                       Contact: ${item.contact}<br>
+                       <p>${linkify(item.beschrijving)}</p>`;
 
       if (item.type === 'aanbod') aanbodList.appendChild(div);
       else vraagList.appendChild(div);
