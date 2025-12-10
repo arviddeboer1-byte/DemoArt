@@ -1,65 +1,64 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vraag & Aanbod Prikbord</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
-    h1 { text-align: center; }
-    form { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
-    button { margin-top: 15px; padding: 10px 15px; }
-    .item { border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
-    .vraag { background: #fff4f4; }
-    .aanbod { background: #f4fff4; }
-    .item img { max-width: 200px; margin-top: 10px; display: block; border-radius: 5px; }
-    .item a { color: blue; text-decoration: underline; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vraag & Aanbod Prikbord</title>
+<style>
+body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
+h1 { text-align: center; }
+form { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+label { display: block; margin-top: 10px; font-weight: bold; }
+input, select, textarea { width: 100%; padding: 8px; margin-top: 5px; }
+button { margin-top: 15px; padding: 10px 15px; }
+.item { border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+.vraag { background: #fff4f4; }
+.aanbod { background: #f4fff4; }
+.item img { max-width: 200px; display: block; margin-top: 8px; border-radius: 6px; }
+</style>
 </head>
 <body>
-  <h1>Vraag & Aanbod Prikbord</h1>
 
-  <form id="postForm">
-    <label>Type</label>
-    <select id="type">
-      <option value="vraag">Vraag</option>
-      <option value="aanbod">Aanbod</option>
-    </select>
+<h1>Vraag & Aanbod Prikbord</h1>
 
-    <label>Naam</label>
-    <input type="text" id="naam" required />
+<form id="postForm">
+  <label>Type</label>
+  <select id="type">
+    <option value="vraag">Vraag</option>
+    <option value="aanbod">Aanbod</option>
+  </select>
 
-    <label>Contactgegevens</label>
-    <input type="text" id="contact" required />
+  <label>Naam</label>
+  <input type="text" id="naam" required />
 
-    <label>Beschrijving</label>
-    <textarea id="beschrijving" rows="4" required></textarea>
+  <label>Contactgegevens</label>
+  <input type="text" id="contact" required />
 
-    <label>Foto (optioneel)</label>
-    <input type="file" id="foto" accept="image/*" />
+  <label>Beschrijving</label>
+  <textarea id="beschrijving" rows="4" required></textarea>
 
-    <button type="submit">Plaats bericht</button>
-  </form>
+  <label>Afbeelding (optioneel)</label>
+  <input type="file" id="foto" accept="image/*" />
 
-  <h2>Aanbod</h2>
-  <div id="aanbodList"></div>
+  <button type="submit">Plaats bericht</button>
+</form>
 
-  <h2>Vragen</h2>
-  <div id="vraagList"></div>
+<h2>Aanbod</h2>
+<div id="aanbodList"></div>
+
+<h2>Vragen</h2>
+<div id="vraagList"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
 
-// --- Firebase Config ---
 const firebaseConfig = {
   apiKey: "AIzaSyDjRzYTrvVHK583A9h3e75LBfmQSWsmz1Y",
   authDomain: "myremoteagent-bb42c.firebaseapp.com",
   projectId: "myremoteagent-bb42c",
-  storageBucket: "myremoteagent-bb42c.appspot.com",
+  storageBucket: "myremoteagent-bb42c.firebasestorage.app",
   messagingSenderId: "611952695596",
   appId: "1:611952695596:web:58e84e24bb70a475e4b489",
   measurementId: "G-ZY1E7CGRLV"
@@ -67,19 +66,12 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
+const storage = getStorage(app, "gs://myremoteagent-bb42c.firebasestorage.app");
 
 const form = document.getElementById('postForm');
 const aanbodList = document.getElementById('aanbodList');
 const vraagList = document.getElementById('vraagList');
 
-// Helper om URL's klikbaar te maken
-function linkify(text) {
-  const urlPattern = /(https?:\/\/[^\s]+)/g;
-  return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
-}
-
-// Realtime ophalen van berichten
 const q = query(collection(db, "prikbord"), orderBy("timestamp", "desc"));
 onSnapshot(q, (snapshot) => {
   aanbodList.innerHTML = "";
@@ -89,60 +81,58 @@ onSnapshot(q, (snapshot) => {
     const item = doc.data();
     const div = document.createElement('div');
     div.className = 'item ' + item.type;
-    div.innerHTML = `
-      <strong>${item.naam}</strong><br>
-      Contact: ${item.contact}<br>
-      <p>${linkify(item.beschrijving)}</p>
-      ${item.fotoUrl ? `<img src="${item.fotoUrl}" alt="Foto">` : ''}
-    `;
+    div.innerHTML = `<strong>${escapeHtml(item.naam)}</strong><br>
+                     Contact: ${escapeHtml(item.contact)}<br>
+                     <p>${linkify(escapeHtml(item.beschrijving))}</p>`;
+    if(item.fotoURL){
+      const img = document.createElement('img');
+      img.src = item.fotoURL;
+      div.appendChild(img);
+    }
+
     if (item.type === 'aanbod') aanbodList.appendChild(div);
     else vraagList.appendChild(div);
   });
 });
 
-// Formulier afhandelen
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+  const fileInput = document.getElementById('foto');
+  const file = fileInput.files[0];
 
-  const type = document.getElementById('type').value;
-  const naam = document.getElementById('naam').value.trim();
-  const contact = document.getElementById('contact').value.trim();
-  const beschrijving = document.getElementById('beschrijving').value.trim();
-  const fotoInput = document.getElementById('foto');
-
-  if (!naam || !contact || !beschrijving) {
-    alert("Vul alle verplichte velden in.");
-    return;
+  let fotoURL = "";
+  if(file){
+    const fileRef = storageRef(storage, `prikbord/${Date.now()}_${file.name}`);
+    await uploadBytes(fileRef, file);
+    fotoURL = await getDownloadURL(fileRef);
   }
 
-  let fotoUrl = null;
+  const entry = {
+    type: document.getElementById('type').value,
+    naam: document.getElementById('naam').value,
+    contact: document.getElementById('contact').value,
+    beschrijving: document.getElementById('beschrijving').value,
+    fotoURL: fotoURL,
+    timestamp: Date.now()
+  };
 
-  try {
-    if(fotoInput.files && fotoInput.files.length > 0) {
-      const file = fotoInput.files[0];
-      if(file.size > 5 * 1024 * 1024){ // max 5MB
-        alert("Het gekozen bestand is te groot (max 5MB).");
-        return;
-      }
-      const fileRef = ref(storage, `prikbord/${Date.now()}_${file.name}`);
-      await uploadBytes(fileRef, file);
-      fotoUrl = await getDownloadURL(fileRef);
-    }
-  } catch(err) {
-    console.warn("Fout bij foto upload, bericht wordt zonder foto geplaatst:", err);
-    fotoUrl = null;
-  }
-
-  const entry = { type, naam, contact, beschrijving, timestamp: Date.now(), fotoUrl };
-
-  try {
-    await addDoc(collection(db, "prikbord"), entry);
-    form.reset();
-  } catch(err) {
-    console.error("Fout bij opslaan:", err);
-    alert("Er is een fout opgetreden bij het plaatsen van je bericht.");
-  }
+  await addDoc(collection(db, "prikbord"), entry);
+  form.reset();
 });
+
+// Helper om HTML te escapen
+function escapeHtml(s){
+  return String(s||'').replace(/&/g,'&amp;')
+                       .replace(/</g,'&lt;')
+                       .replace(/>/g,'&gt;');
+}
+
+// Helper om URLs klikbaar te maken
+function linkify(text) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.replace(urlRegex, url => `<a href="${url}" target="_blank">${url}</a>`);
+}
 </script>
+
 </body>
 </html>
