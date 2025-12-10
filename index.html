@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Vraag & Aanbod Prikbord</title>
+<title>Vraag & Aanbod locatie_A</title>
 <style>
 body { font-family: Arial, sans-serif; max-width: 900px; margin: auto; padding: 20px; }
 h1 { text-align: center; }
@@ -19,7 +19,7 @@ button { margin-top: 15px; padding: 10px 15px; }
 </head>
 <body>
 
-<h1>Vraag & Aanbod Prikbord</h1>
+<h1>Vraag & Aanbod locatie_A</h1>
 
 <form id="postForm">
   <label>Type</label>
@@ -72,7 +72,7 @@ const form = document.getElementById('postForm');
 const aanbodList = document.getElementById('aanbodList');
 const vraagList = document.getElementById('vraagList');
 
-const q = query(collection(db, "prikbord"), orderBy("timestamp", "desc"));
+const q = query(collection(db, "locatie_A"), orderBy("timestamp", "desc"));
 onSnapshot(q, (snapshot) => {
   aanbodList.innerHTML = "";
   vraagList.innerHTML = "";
@@ -102,7 +102,7 @@ form.addEventListener('submit', async (e) => {
 
   let fotoURL = "";
   if(file){
-    const fileRef = storageRef(storage, `prikbord/${Date.now()}_${file.name}`);
+    const fileRef = storageRef(storage, `locatie_A/${Date.now()}_${file.name}`);
     await uploadBytes(fileRef, file);
     fotoURL = await getDownloadURL(fileRef);
   }
@@ -116,7 +116,7 @@ form.addEventListener('submit', async (e) => {
     timestamp: Date.now()
   };
 
-  await addDoc(collection(db, "prikbord"), entry);
+  await addDoc(collection(db, "locatie_A"), entry);
   form.reset();
 });
 
